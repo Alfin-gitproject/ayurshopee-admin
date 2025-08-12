@@ -97,16 +97,17 @@ export default function OrderDetailsPage() {
             <h2 className="text-xl font-semibold mb-2">Order Information</h2>
             <p>Order ID: {order._id}</p>
             <p>Status: {order.orderStatus}</p>
-            <p>Total Amount: ₹{order.totalAmount?.toFixed(2)}</p>
+            <p>Price : ₹{order.totalAmount?.toFixed(2)}</p>
           </div>
 
           {/* Shipping Details */}
           <div>
             <h2 className="text-xl font-semibold mb-2">Shipping Details</h2>
-            <p>{order.shippingInfo?.name}</p>
-            <p>{order.shippingInfo?.address}</p>
-            <p>{order.shippingInfo?.city}, {order.shippingInfo?.zipCode}</p>
-            <p>{order?.shippingInfo?.country}</p>
+            <p><strong>Name:</strong> {order.shippingInfo?.fullName}</p>
+            <p><strong>Address:</strong> {order.shippingInfo?.address}</p>
+            <p><strong>Location:</strong> {order.shippingInfo?.city}, {order.shippingInfo?.zipCode}</p>
+            <p><strong>Country:</strong> {order?.shippingInfo?.country}</p>
+            <p><strong>Phone:</strong> {order.shippingInfo?.phoneNo}</p>
           </div>
 
           <div>
