@@ -4,8 +4,18 @@ import jwt from 'jsonwebtoken';
 import { validateUserLogin, sanitizeInput } from '@/utils/validation';
 
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_CORS_ALLOWED_ORIGIN || '*');
+  // Set CORS headers - allow multiple origins
+  const allowedOrigins = [
+    'https://www.ayurshoppee.com',
+    'https://ayurshoppee.com',
+    process.env.NEXT_PUBLIC_CORS_ALLOWED_ORIGIN
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -74,10 +84,10 @@ export default async function handler(req, res) {
       { expiresIn: '1d' }
     );
 
-    // Set cookie with proper settings
+    // Set cookie with proper settings for cross-domain
     const cookieSettings = process.env.NODE_ENV === 'production' 
-      ? `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=None; Secure`
-      : `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`;
+      ? `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=None; Secure; Domain=.ayurshoppee.com`
+      : `token=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`;
     
     res.setHeader('Set-Cookie', cookieSettings);
 
@@ -93,6 +103,8 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Login error:', error);
+    console.error('Request body:', req.body);
+    console.error('Request headers origin:', req.headers.origin);
     res.status(500).json({ 
       success: false, 
       message: error.message || 'Login failed'
