@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 export default function Home() {
+  const [isLogin, setIsLogin] = useState(true); // Toggle between login and register
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
-    password: ''
+    phone: '',
+    password: '',
+    confirmPassword: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -28,13 +31,12 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const loginData = {
-        email: formData.email,
-        password: formData.password
-      };
+      const loginData = {};
+      if (formData.email) loginData.email = formData.email;
+      if (formData.phone) loginData.phone = formData.phone;
+      loginData.password = formData.password;
 
-      // Use the admin-specific login endpoint
-      const response = await axios.post('/api/auth/adminLogin', loginData, {
+      const response = await axios.post('/api/auth/login', loginData, {
         withCredentials: true
       });
 
@@ -42,7 +44,50 @@ export default function Home() {
     } catch (err) {
       setError(
         err.response?.data?.message || 
-        'Admin login failed. Please check your credentials and ensure you have admin privileges.'
+        'Login failed. Please check your credentials.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    // Validate that either email or phone is provided
+    if (!formData.email && !formData.phone) {
+      setError('Please provide either email or phone number');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const registerData = {
+        name: formData.name,
+        password: formData.password
+      };
+      if (formData.email) registerData.email = formData.email;
+      if (formData.phone) registerData.phone = formData.phone;
+
+      const response = await axios.post('/api/auth/register', registerData, {
+        withCredentials: true
+      });
+
+      // Auto-login after successful registration
+      router.push('/orders');
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 
+        'Registration failed. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -76,8 +121,42 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
         <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
+            {/* Toggle between Login and Register */}
+            <div className="flex justify-center mb-6">
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-1 flex">
+                <button
+                  onClick={() => {
+                    setIsLogin(true);
+                    setError('');
+                    setFormData({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+                  }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    isLogin 
+                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => {
+                    setIsLogin(false);
+                    setError('');
+                    setFormData({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+                  }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    !isLogin 
+                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+            </div>
+
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white text-center">
-              Admin Login
+              {isLogin ? 'Sign in to your account' : 'Create your account'}
             </h1>
             
             {error && (
@@ -86,14 +165,39 @@ export default function Home() {
               </div>
             )}
 
-            <form className="space-y-4 md:space-y-6" onSubmit={handleLogin}>
+            <form 
+              className="space-y-4 md:space-y-6" 
+              onSubmit={isLogin ? handleLogin : handleRegister}
+            >
+              {/* Name field - only for registration */}
+              {!isLogin && (
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="John Doe"
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+
               {/* Email field */}
               <div>
                 <label
                   htmlFor="email"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
-                  Email Address
+                  Email {isLogin ? '(or use phone below)' : '(optional if phone provided)'}
                 </label>
                 <input
                   type="email"
@@ -103,7 +207,27 @@ export default function Home() {
                   onChange={handleInputChange}
                   className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   placeholder="name@company.com"
-                  required
+                  required={isLogin && !formData.phone}
+                />
+              </div>
+
+              {/* Phone field */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Phone Number {isLogin ? '(or use email above)' : '(optional if email provided)'}
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  placeholder="+1234567890"
+                  required={isLogin && !formData.email}
                 />
               </div>
 
@@ -115,36 +239,41 @@ export default function Home() {
                 >
                   Password *
                 </label>
-                <div className="relative">
+                <input
+                  type="password"
+                  name="password"
+                  id="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="••••••••"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  required
+                  minLength="6"
+                />
+              </div>
+
+              {/* Confirm Password field - only for registration */}
+              {!isLogin && (
+                <div>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Confirm Password *
+                  </label>
                   <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    id="password"
-                    value={formData.password}
+                    type="password"
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder="••••••••"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    required
+                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    required={!isLogin}
                     minLength="6"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
-                  >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
@@ -155,14 +284,26 @@ export default function Home() {
                     : 'bg-blue-600 hover:bg-blue-700'
                 } focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors`}
               >
-                {loading ? 'Signing In...' : 'Sign In'}
+                {loading 
+                  ? (isLogin ? 'Signing In...' : 'Creating Account...') 
+                  : (isLogin ? 'Sign In' : 'Create Account')
+                }
               </button>
             </form>
 
             {/* Helper text */}
             <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              Admin access only. Please ensure you have admin privileges.
+              {isLogin 
+                ? "Don't have an account? Click Register above" 
+                : "Already have an account? Click Login above"
+              }
             </div>
+            
+            {!isLogin && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                * Required fields. Provide either email or phone number.
+              </div>
+            )}
           </div>
         </div>
       </div>

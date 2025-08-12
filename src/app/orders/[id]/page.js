@@ -103,11 +103,12 @@ export default function OrderDetailsPage() {
           {/* Shipping Details */}
           <div>
             <h2 className="text-xl font-semibold mb-2">Shipping Details</h2>
-            <p><strong>Name:</strong> {order.shippingInfo?.fullName}</p>
-            <p><strong>Address:</strong> {order.shippingInfo?.address}</p>
-            <p><strong>Location:</strong> {order.shippingInfo?.city}, {order.shippingInfo?.zipCode}</p>
-            <p><strong>Country:</strong> {order?.shippingInfo?.country}</p>
-            <p><strong>Phone:</strong> {order.shippingInfo?.phoneNo}</p>
+            <p>{order.shippingInfo?.name || 'N/A'}</p>
+            <p>{order.shippingInfo?.address || 'N/A'}</p>
+            <p>
+              {(order.shippingInfo?.city || 'N/A')}, {(order.shippingInfo?.zipCode || 'N/A')}
+            </p>
+            <p>{order.shippingInfo?.country || 'N/A'}</p>
           </div>
 
           <div>
@@ -129,16 +130,26 @@ export default function OrderDetailsPage() {
               </tr>
             </thead>
             <tbody>
-              {order.orderItems?.map((item) => (
-                <tr key={item._id}>
-                  <td className="border p-2">{item.name}</td>
-                  <td className="border p-2 text-center">{item.quantity}</td>
-                  <td className="border p-2 text-right">₹{parseFloat(item.price)?.toFixed(2)}</td>
-                  <td className="border p-2 text-right">
-                    ₹{(parseFloat(item.price) * item.quantity)?.toFixed(2)}
+              {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
+                order.orderItems.map((item) => (
+                  <tr key={item._id}>
+                    <td className="border p-2">{item.name}</td>
+                    <td className="border p-2 text-center">{item.quantity}</td>
+                    <td className="border p-2 text-right">
+                      ₹{parseFloat(item.price)?.toFixed(2)}
+                    </td>
+                    <td className="border p-2 text-right">
+                      ₹{(parseFloat(item.price) * item.quantity)?.toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="border p-2" colSpan={4}>
+                    No items found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
