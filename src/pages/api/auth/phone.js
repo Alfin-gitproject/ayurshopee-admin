@@ -2,22 +2,9 @@ import { createRouter } from 'next-connect';
 import User from '@/models/User';
 import dbConnect from '@/utils/dbConnect';
 import jwt from 'jsonwebtoken';
-import cors from 'cors';
 import { randomUUID } from 'crypto';
 
-// CORS configuration
-const corsOptions = {
-  origin: process.env.NEXT_PUBLIC_CORS_ALLOWED_ORIGIN,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
 const handler = createRouter();
-
-handler.use(cors(corsOptions));
 
 handler.post(async (req, res) => {
   try {

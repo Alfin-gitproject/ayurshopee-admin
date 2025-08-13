@@ -4,13 +4,11 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 export default function Home() {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and register
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    loginType: 'email' // 'email' or 'phone'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,69 +23,59 @@ export default function Home() {
     setError(''); // Clear error when user types
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLoginTypeChange = (type) => {
+    setFormData(prev => ({
+      ...prev,
+      loginType: type,
+      // Clear the opposite field when switching
+      email: type === 'phone' ? '' : prev.email,
+      phone: type === 'email' ? '' : prev.phone
+    }));
     setError('');
-    setLoading(true);
-
-    try {
-      const loginData = {};
-      if (formData.email) loginData.email = formData.email;
-      if (formData.phone) loginData.phone = formData.phone;
-      loginData.password = formData.password;
-
-      const response = await axios.post('/api/auth/login', loginData, {
-        withCredentials: true
-      });
-
-      router.push('/orders');
-    } catch (err) {
-      setError(
-        err.response?.data?.message || 
-        'Login failed. Please check your credentials.'
-      );
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const handleRegister = async (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    // Validate that either email or phone is provided
-    if (!formData.email && !formData.phone) {
-      setError('Please provide either email or phone number');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const registerData = {
-        name: formData.name,
+      // Validation
+      if (formData.loginType === 'email' && !formData.email) {
+        throw new Error('Email is required');
+      }
+      if (formData.loginType === 'phone' && !formData.phone) {
+        throw new Error('Phone number is required');
+      }
+      if (!formData.password) {
+        throw new Error('Password is required');
+      }
+
+      // Prepare admin login data
+      const loginData = {
         password: formData.password
       };
-      if (formData.email) registerData.email = formData.email;
-      if (formData.phone) registerData.phone = formData.phone;
 
-      const response = await axios.post('/api/auth/register', registerData, {
+      if (formData.loginType === 'email') {
+        loginData.email = formData.email;
+      } else {
+        loginData.phone = formData.phone;
+      }
+
+      const response = await axios.post('/api/auth/adminLogin', loginData, {
         withCredentials: true
       });
 
-      // Auto-login after successful registration
-      router.push('/orders');
+      if (response.data.success) {
+        router.push('/orders');
+      } else {
+        setError(response.data.message || 'Admin login failed');
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || 
-        'Registration failed. Please try again.'
+        err.message ||
+        'Admin login failed. Please check your credentials.'
       );
     } finally {
       setLoading(false);
@@ -121,43 +109,15 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
         <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            {/* Toggle between Login and Register */}
-            <div className="flex justify-center mb-6">
-              <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-1 flex">
-                <button
-                  onClick={() => {
-                    setIsLogin(true);
-                    setError('');
-                    setFormData({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
-                  }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    isLogin 
-                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => {
-                    setIsLogin(false);
-                    setError('');
-                    setFormData({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
-                  }}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    !isLogin 
-                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  Register
-                </button>
-              </div>
+            {/* Admin Header */}
+            <div className="text-center mb-6">
+              <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+                Admin Login
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Access restricted to administrators only
+              </p>
             </div>
-
-            <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white text-center">
-              {isLogin ? 'Sign in to your account' : 'Create your account'}
-            </h1>
             
             {error && (
               <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
@@ -167,69 +127,81 @@ export default function Home() {
 
             <form 
               className="space-y-4 md:space-y-6" 
-              onSubmit={isLogin ? handleLogin : handleRegister}
+              onSubmit={handleAdminLogin}
             >
-              {/* Name field - only for registration */}
-              {!isLogin && (
+              {/* Login Type Toggle */}
+              <div>
+                <div className="flex justify-center mb-4">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-1 flex">
+                    <button
+                      type="button"
+                      onClick={() => handleLoginTypeChange('email')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        formData.loginType === 'email'
+                          ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleLoginTypeChange('phone')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        formData.loginType === 'phone'
+                          ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      Phone
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email field - only show if email login type */}
+              {formData.loginType === 'email' && (
                 <div>
                   <label
-                    htmlFor="name"
+                    htmlFor="email"
                     className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    Full Name *
+                    Admin Email *
                   </label>
                   <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    value={formData.name}
+                    type="email"
+                    name="email"
+                    id="email"
+                    value={formData.email}
                     onChange={handleInputChange}
                     className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="John Doe"
-                    required={!isLogin}
+                    placeholder="admin@company.com"
+                    required
                   />
                 </div>
               )}
 
-              {/* Email field */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >
-                  Email {isLogin ? '(or use phone below)' : '(optional if phone provided)'}
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  id="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="name@company.com"
-                  required={isLogin && !formData.phone}
-                />
-              </div>
-
-              {/* Phone field */}
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >
-                  Phone Number {isLogin ? '(or use email above)' : '(optional if email provided)'}
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  id="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="+1234567890"
-                  required={isLogin && !formData.email}
-                />
-              </div>
+              {/* Phone field - only show if phone login type */}
+              {formData.loginType === 'phone' && (
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Admin Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    id="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="+1234567890"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Password field */}
               <div>
@@ -252,29 +224,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Confirm Password field - only for registration */}
-              {!isLogin && (
-                <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Confirm Password *
-                  </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    id="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="••••••••"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    required={!isLogin}
-                    minLength="6"
-                  />
-                </div>
-              )}
-
               <button
                 type="submit"
                 disabled={loading}
@@ -284,26 +233,14 @@ export default function Home() {
                     : 'bg-blue-600 hover:bg-blue-700'
                 } focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors`}
               >
-                {loading 
-                  ? (isLogin ? 'Signing In...' : 'Creating Account...') 
-                  : (isLogin ? 'Sign In' : 'Create Account')
-                }
+                {loading ? 'Signing In...' : 'Sign In as Admin'}
               </button>
             </form>
 
             {/* Helper text */}
-            <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-              {isLogin 
-                ? "Don't have an account? Click Register above" 
-                : "Already have an account? Click Login above"
-              }
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              Only users with admin role can access this system
             </div>
-            
-            {!isLogin && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                * Required fields. Provide either email or phone number.
-              </div>
-            )}
           </div>
         </div>
       </div>

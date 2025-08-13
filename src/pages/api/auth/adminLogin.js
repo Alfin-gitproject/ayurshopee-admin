@@ -4,18 +4,6 @@ import jwt from 'jsonwebtoken';
 import { validateUserLogin, sanitizeInput } from '@/utils/validation';
 
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_CORS_ALLOWED_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
   // Only allow POST method
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -30,25 +18,38 @@ export default async function handler(req, res) {
     
     // Sanitize input
     const email = sanitizeInput(req.body.email);
+    const phone = sanitizeInput(req.body.phone);
     const password = req.body.password;
 
-    // Validate input - only email is required for admin login
-    if (!email || !password) {
+    // Validate input - either email or phone is required
+    if (!password) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Email and password are required for admin login' 
+        message: 'Password is required for admin login' 
       });
     }
 
-    if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+    if (!email && !phone) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Either email or phone number is required for admin login' 
+      });
+    }
+
+    if (email && !/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide a valid email address' 
       });
     }
 
-    // Find user by email only and select password
-    const user = await User.findOne({ email }).select('+password');
+    // Find user by email or phone and select password and roles
+    let user;
+    if (email) {
+      user = await User.findOne({ email }).select('+password +roles');
+    } else if (phone) {
+      user = await User.findOne({ phone }).select('+password +roles');
+    }
 
     if (!user) {
       return res.status(401).json({ 
@@ -75,11 +76,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // Create token
+    // Create token with admin info
     const token = jwt.sign(
-      { id: user._id }, 
+      { 
+        id: user._id,
+        role: user.roles,
+        isAdmin: true 
+      }, 
       process.env.JWT_SECRET, 
-      { expiresIn: '1d' }
+      { expiresIn: '8h' } // Shorter expiry for admin sessions
     );
 
     // Set cookie with proper settings

@@ -1,7 +1,9 @@
 'use client'
 
+
 import { useState } from "react";
 import axios from "axios";
+import Swal from 'sweetalert2';
 
 export default function UpdateOrder({ orderId, orderData }) {
   const [status, setStatus] = useState(orderData.orderStatus||"");
@@ -10,13 +12,40 @@ export default function UpdateOrder({ orderId, orderData }) {
     try {
       const response = await axios.patch(`/api/orders/${id}`, { orderStatus: status });
       if (response.data.success) {
-        alert("Order status updated successfully");
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Order status updated successfully',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        });
       } else {
-        alert("Failed to update order status");
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update order status',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+        });
       }
     } catch (error) {
       console.error("Error updating order status:", error);
-      alert("An error occurred while updating the order status");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An error occurred while updating the order status',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      });
     }
   };
 

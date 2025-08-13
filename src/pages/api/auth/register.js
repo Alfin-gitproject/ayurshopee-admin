@@ -4,18 +4,6 @@ import jwt from 'jsonwebtoken';
 import { validateUserRegistration, sanitizeInput } from '@/utils/validation';
 
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_CORS_ALLOWED_ORIGIN || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
   // Only allow POST method
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);

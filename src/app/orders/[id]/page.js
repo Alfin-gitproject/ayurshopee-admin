@@ -103,7 +103,7 @@ export default function OrderDetailsPage() {
           {/* Shipping Details */}
           <div>
             <h2 className="text-xl font-semibold mb-2">Shipping Details</h2>
-            <p>{order.shippingInfo?.name || 'N/A'}</p>
+            <p>{order.shippingInfo?.fullName || 'N/A'}</p>
             <p>{order.shippingInfo?.address || 'N/A'}</p>
             <p>
               {(order.shippingInfo?.city || 'N/A')}, {(order.shippingInfo?.zipCode || 'N/A')}
