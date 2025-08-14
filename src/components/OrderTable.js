@@ -38,7 +38,12 @@ export default function OrderTable({ orders, onOrderDeleted }) {
                   {order.user ? order.user.name : 'N/A'}
                 </td>
                 <td className="px-6 py-4">
-                  {new Date(order.createdAt).toLocaleDateString()}
+                  <div className="text-sm">
+                    <div>{new Date(order.createdAt).toLocaleDateString()}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
