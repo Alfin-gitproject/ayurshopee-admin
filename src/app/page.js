@@ -90,12 +90,15 @@ export default function Home() {
           withCredentials: true 
         });
         setUser(response.data.data);
-        console.log(user);
-        
         if (response.data.data) {
           router.push('/orders'); // Navigate to orders if user is authenticated
         }
       } catch (err) {
+        if (err.response?.status === 401) {
+          // Not authenticated, do not redirect
+          setUser(null);
+          return;
+        }
         setError(err.response?.data?.message || 'Something went wrong');
       } finally {
         setLoading(false); // End loading
