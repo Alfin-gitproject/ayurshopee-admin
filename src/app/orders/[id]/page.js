@@ -103,12 +103,11 @@ export default function OrderDetailsPage() {
           {/* Shipping Details */}
           <div>
             <h2 className="text-xl font-semibold mb-2">Shipping Details</h2>
-            <p>{order.shippingInfo?.fullName || 'N/A'}</p>
-            <p>{order.shippingInfo?.address || 'N/A'}</p>
-            <p>
-              {(order.shippingInfo?.city || 'N/A')}, {(order.shippingInfo?.zipCode || 'N/A')}
-            </p>
-            <p>{order.shippingInfo?.country || 'N/A'}</p>
+            <p><b>Name:</b> {order.shippingInfo?.fullName || 'N/A'}</p>
+            <p><b>Phone No:</b> {order.shippingInfo?.phoneNo || 'N/A'}</p>
+            <p><b>Address:</b> {order.shippingInfo?.address || 'N/A'}</p>
+            <p><b>City/ZIP:</b> {(order.shippingInfo?.city || 'N/A')}, {(order.shippingInfo?.zipCode || 'N/A')}</p>
+            <p><b>Country:</b> {order.shippingInfo?.country || 'N/A'}</p>
           </div>
 
           <div>
