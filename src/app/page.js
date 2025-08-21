@@ -84,6 +84,17 @@ export default function Home() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      // Check for token in cookies before calling getAdmin
+      let token = null;
+      if (typeof document !== 'undefined') {
+        const match = document.cookie.match(/(^| )token=([^;]+)/);
+        if (match) token = match[2];
+      }
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true); // Start loading
       try {
         const response = await axios.get('/api/auth/getAdmin', {
