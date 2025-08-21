@@ -54,11 +54,15 @@ export default function Page() {
         setError('Failed to fetch orders.');
       }
     } catch (err) {
+      if (err.response?.status === 401) {
+        // Not authenticated, redirect to login
+        router.push('/admin/login');
+        return;
+      }
       setError(
         err.response?.data?.message || 
         'An error occurred. Please try again.'
       );
-      router.push('/');
     } finally {
       setLoading(false);
     }
